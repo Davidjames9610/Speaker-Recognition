@@ -3,7 +3,7 @@ import yaml
 import subprocess
 import h5py
 import numpy as np
-
+import sox
 
 
 def safe_makedir(dirname):
@@ -24,7 +24,7 @@ def explore_file(filepath):
         value = np.array(value)
         print("Value Shape:", value.shape)
         print("Value:", value)
-        print("="*25)
+        print("=" * 25)
 
 
 def convert_wav(inpath, outpath, no_channels, sampling_rate, bit_precision,
@@ -35,17 +35,17 @@ def convert_wav(inpath, outpath, no_channels, sampling_rate, bit_precision,
     """
     parent, _ = os.path.split(outpath)
     safe_makedir(parent)
-    command = "sox {} -r {} -c {} -b {} {}".format( inpath,
-                                                    sampling_rate,
-                                                    no_channels,
-                                                    bit_precision,
-                                                    outpath)
+    command = "sox {} -r {} -c {} -b {} {}".format(inpath,
+                                                   sampling_rate,
+                                                   no_channels,
+                                                   bit_precision,
+                                                   outpath)
     if showWarning:
-        subprocess.call(command, shell=True) 
+        subprocess.call(command, shell=True)
     else:
         with open(os.devnull, 'w') as FNULL:
             subprocess.call(command, shell=True, stdout=FNULL,
-                                                    stderr=subprocess.STDOUT)
+                            stderr=subprocess.STDOUT)
 
 
 def parse_yaml(filepath="conf.yaml"):

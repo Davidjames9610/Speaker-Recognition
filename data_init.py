@@ -1,11 +1,9 @@
 import os
-import yaml
 import shutil
 import sidekit
 import numpy as np
 from tqdm import tqdm
 from utils import convert_wav, safe_makedir, parse_yaml
-
 
 
 class Initializer():
@@ -33,19 +31,18 @@ class Initializer():
         Args:
             conf_path (String): path of the YAML configuration file
         """
-        
-        #location of output files
+
+        # location of output files
         self.conf = parse_yaml(conf_path)
         self.task_dir = os.path.join(self.conf['outpath'], "task")
-        #location of audio files
+        # location of audio files
         self.audio_dir = os.path.join(self.conf['outpath'], "audio")
-        #location of all the audio data
+        # location of all the audio data
         self.data_dir = os.path.join(self.audio_dir, "data")
-        #location of just the enrollment audio data
+        # location of just the enrollment audio data
         self.enroll_dir = os.path.join(self.audio_dir, "enroll")
-        #location of just the test audio data
+        # location of just the test audio data
         self.test_dir = os.path.join(self.audio_dir, "test")
-
 
     def preprocess_audio(self):
         """
@@ -54,10 +51,10 @@ class Initializer():
         directory, the enrolled data only will be in 'enroll', and the
         test data will be in 'test'.
         """
-        #remove the data directory if exists
+        # remove the data directory if exists
         if os.path.exists(self.data_dir):
             shutil.rmtree(self.data_dir)
-        #iterate over speakers
+        # iterate over speakers
         speakers = sorted(os.listdir(self.conf['inpath']))
         for sp in tqdm(speakers, desc="Converting Audio"):
             speaker_path = os.path.join(self.conf['inpath'], sp)
@@ -67,28 +64,28 @@ class Initializer():
                 outwav = os.path.join(self.data_dir, wav)
                 convert_wav(inwav,
                             outwav,
-                            no_channels = self.conf['no_channels'],
-                            sampling_rate = self.conf['sampling_rate'],
-                            bit_precision = self.conf['bit_precision'])
-        
-        #remove the enroll directory if exists
+                            no_channels=self.conf['no_channels'],
+                            sampling_rate=self.conf['sampling_rate'],
+                            bit_precision=self.conf['bit_precision'])
+
+        # remove the enroll directory if exists
         if os.path.exists(self.enroll_dir):
             shutil.rmtree(self.enroll_dir)
-        #remove the test directory if exists
+        # remove the test directory if exists
         if os.path.exists(self.test_dir):
             shutil.rmtree(self.test_dir)
-        
-        #create audio/enroll directory
+
+        # create audio/enroll directory
         safe_makedir(self.enroll_dir)
-        #create audio/test directory
+        # create audio/test directory
         safe_makedir(self.test_dir)
 
-        #parse num of sessions from configuration
+        # parse num of sessions from configuration
         enroll_sessions = self.conf['enroll_sessions']
         test_sessions = self.conf['test_sessions']
-        assert enroll_sessions+test_sessions <= 10,\
+        assert enroll_sessions + test_sessions <= 10, \
             "The summation of all sessions must be less than or equal 10!!"
-        #iterate over all preprocessed waves
+        # iterate over all preprocessed waves
         wav_filenames = os.listdir(self.data_dir)
         for wav in tqdm(wav_filenames, desc="Copying enroll/test waves"):
             _, sess, _, _ = wav.split(".")
@@ -96,10 +93,9 @@ class Initializer():
             if int(sess) <= enroll_sessions:
                 outwav = os.path.join(self.enroll_dir, wav)
                 shutil.copyfile(inwav, outwav)
-            elif int(sess) <= enroll_sessions+test_sessions:
+            elif int(sess) <= enroll_sessions + test_sessions:
                 outwav = os.path.join(self.test_dir, wav)
                 shutil.copyfile(inwav, outwav)
-
 
     def create_idMap(self, group):
         """
@@ -114,7 +110,7 @@ class Initializer():
             group (string): name of the group that we want to create idmap for
         NOTE: Duplicated entries are allowed in each list.
         """
-        assert group in ["enroll", "test"],\
+        assert group in ["enroll", "test"], \
             "Invalid group name!! Choose either 'enroll', 'test'"
         # Make enrollment (IdMap) file list
         group_dir = os.path.join(self.audio_dir, group)
@@ -122,8 +118,8 @@ class Initializer():
         # list of model IDs
         group_models = [files.split('.')[0] for files in group_files]
         # list of audio segments IDs
-        group_segments = [group+"/"+f for f in group_files]
-        
+        group_segments = [group + "/" + f for f in group_files]
+
         # Generate IdMap
         group_idmap = sidekit.IdMap()
         group_idmap.leftids = np.asarray(group_models)
@@ -131,14 +127,13 @@ class Initializer():
         group_idmap.start = np.empty(group_idmap.rightids.shape, '|O')
         group_idmap.stop = np.empty(group_idmap.rightids.shape, '|O')
         if group_idmap.validate():
-            group_idmap.write(os.path.join(self.task_dir, group+'_idmap.h5'))
-            #generate tv_idmap and plda_idmap as well
+            group_idmap.write(os.path.join(self.task_dir, group + '_idmap.h5'))
+            # generate tv_idmap and plda_idmap as well
             if group == "enroll":
                 group_idmap.write(os.path.join(self.task_dir, 'tv_idmap.h5'))
                 group_idmap.write(os.path.join(self.task_dir, 'plda_idmap.h5'))
         else:
             raise RuntimeError('Problems with creating idMap file')
-
 
     def create_test_trials(self):
         """
@@ -151,9 +146,9 @@ class Initializer():
         is true then the score between model i and segment j will be computed.
         """
         # Make list of test segments
-        test_data_dir = os.path.join(self.audio_dir, "test") #test data directory
+        test_data_dir = os.path.join(self.audio_dir, "test")  # test data directory
         test_files = sorted(os.listdir(test_data_dir))
-        test_files = ["test/"+f for f in test_files]
+        test_files = ["test/" + f for f in test_files]
 
         # Make lists for trial definition, and write to file
         test_models = []
@@ -174,11 +169,10 @@ class Initializer():
                     test_labels.append('target')
                 else:
                     test_labels.append('nontarget')
-            
+
         with open(os.path.join(self.task_dir, "test_trials.txt"), "w") as fh:
             for i in range(len(test_models)):
-                fh.write(test_models[i]+' '+test_segments[i]+' '+test_labels[i]+'\n')
-
+                fh.write(test_models[i] + ' ' + test_segments[i] + ' ' + test_labels[i] + '\n')
 
     def create_Ndx(self):
         """
@@ -187,15 +181,14 @@ class Initializer():
         if the test between model i and segment j is target. non(i,j) is true
         if the test between model i and segment j is non-target.
         """
-        #Define Key and Ndx from text file
-        #SEE: https://projets-lium.univ-lemans.fr/sidekit/_modules/sidekit/bosaris/key.html
+        # Define Key and Ndx from text file
+        # SEE: https://projets-lium.univ-lemans.fr/sidekit/_modules/sidekit/bosaris/key.html
         key = sidekit.Key.read_txt(os.path.join(self.task_dir, "test_trials.txt"))
         ndx = key.to_ndx()
         if ndx.validate():
             ndx.write(os.path.join(self.task_dir, 'test_ndx.h5'))
         else:
             raise RuntimeError('Problems with creating idMap file')
-
 
     def structure(self):
         """
@@ -210,9 +203,8 @@ class Initializer():
         print("DONE!!")
 
 
-
-
 if __name__ == "__main__":
-    conf_filename = "py3env/conf.yaml"
+    conf_filename = "conf.yaml"
+    print('lets go')
     init = Initializer(conf_filename)
     init.structure()

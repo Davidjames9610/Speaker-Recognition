@@ -7,10 +7,14 @@ share
 
 #output directories
 exp
+input
+output
 
 #python files/directories
 __pycache__
 *.pyc
+*.xml
+*.iml
 
 #project files
 explore_hdf5_files.py

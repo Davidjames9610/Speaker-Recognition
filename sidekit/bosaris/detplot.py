@@ -35,8 +35,8 @@ import numpy
 import matplotlib
 import os
 
-if "DISPLAY" not in os.environ:
-    matplotlib.use('PDF', warn=False, force=True)
+if os.name == 'posix' and "DISPLAY" not in os.environ:
+    matplotlib.use('Agg')
 import matplotlib.pyplot as mpl
 import scipy
 from collections import namedtuple
